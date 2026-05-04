@@ -14,9 +14,23 @@ except Exception:
     st.error("🔑 OpenAI API Key тохируулагдаагүй байна. Settings -> Secrets хэсэгт нэмнэ үү.")
 
 def get_embedding(text, model="text-embedding-3-small"):
-    # Кирилл үсэг болон тусгай тэмдэгтүүдийг цэвэрлэх/бэлдэх
+    # 1. Текстийг Unicode хэлбэрт найдвартай шилжүүлэх
+    if isinstance(text, bytes):
+        text = text.decode('utf-8')
+    
+    # 2. Шинэ мөр болон илүү зайг цэвэрлэх
     text = text.replace("\n", " ").strip()
-    return client.embeddings.create(input=[text], model=model).data[0].embedding
+    
+    # 3. Хэрэв текст хоосон бол алдаа гарахаас сэргийлэх
+    if not text:
+        return [0.0] * 1536 # Хоосон вектор буцаах
+        
+    try:
+        return client.embeddings.create(input=[text], model=model).data[0].embedding
+    except Exception as e:
+        # Алдаа гарвал консол дээр хэвлэх
+        print(f"Embedding error details: {e}")
+        raise e
 
 def cosine_similarity(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
