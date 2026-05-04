@@ -3,4 +3,3 @@ python-docx
 PyPDF2
 openai
 numpy
-return uploaded_file.getvalue().decode("utf-8", errors="ignore")
