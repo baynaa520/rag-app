@@ -7,9 +7,10 @@ from openai import OpenAI
 import numpy as np
 
 # --- 1. ТОХИРГОО ---
-# OpenAI API Key-ээ энд бичээрэй
-client = OpenAI(api_key="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")
+import streamlit as st
 
+OPENAI_API_KEY = "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"
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 def get_embedding(text, model="text-embedding-3-small"):
     text = text.replace("\n", " ")
     return client.embeddings.create(input=[text], model=model).data[0].embedding
