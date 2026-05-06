@@ -19,6 +19,55 @@ try:
 except Exception as e:
     st.error("🔑 OpenAI API Key тохируулагдаагүй байна. Settings -> Secrets хэсэгт OPENAI_API_KEY нэрээр нэмнэ үү.")
 
+# --- BACKGROUND CSS ---
+def add_bg_math_pattern():
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background-color: #0e1117;
+            background-image: url("https://www.transparenttextures.com/patterns/carbon-fibre.png");
+        }
+        
+        /* Ар талд томьёо хөвж байгаа мэт эффект өгөх */
+        .stApp::before {
+            content: "E=mc²  f(x)=∫x²dx  ∇×B=μ₀J  ∑n=1  π≈3.14  Hψ=Eψ  sin²θ+cos²θ=1  a²+b²=c²";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.05;  /* Томьёонууд хэт тод байж болохгүй */
+            font-size: 25px;
+            color: #ffffff;
+            line-height: 150px;
+            word-spacing: 200px;
+            font-family: 'Courier New', Courier, monospace;
+            pointer-events: none;
+            overflow: hidden;
+            animation: move-bg 60s linear infinite;
+        }
+
+        @keyframes move-bg {
+            from { transform: translateY(0); }
+            to { transform: translateY(-500px); }
+        }
+        
+        /* Sidebar-ийг илүү гоё болгох */
+        [data-testid="stSidebar"] {
+            background-color: #161b22;
+            border-right: 1px solid #30363d;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Функцээ дуудах
+add_bg_math_pattern()
+
+
 def get_embedding(text, model="text-embedding-3-small"):
     # Текстийг цэвэрлэх ба Unicode-д найдвартай шилжүүлэх
     if isinstance(text, bytes):
