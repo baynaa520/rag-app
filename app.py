@@ -20,53 +20,95 @@ except Exception as e:
     st.error("🔑 OpenAI API Key тохируулагдаагүй байна. Settings -> Secrets хэсэгт OPENAI_API_KEY нэрээр нэмнэ үү.")
 
 # --- BACKGROUND CSS ---
-def add_bg_math_pattern():
+def add_website_style_bg():
     st.markdown(
         """
         <style>
+        /* 1. Вэбсайт шиг Mesh Gradient Background */
         .stApp {
-            background-color: #0e1117;
-            background-image: url("https://www.transparenttextures.com/patterns/carbon-fibre.png");
-        }
-        
-        /* Ар талд томьёо хөвж байгаа мэт эффект өгөх */
-        .stApp::before {
-            content: "E=mc²  f(x)=∫x²dx  ∇×B=μ₀J  ∑n=1  π≈3.14  Hψ=Eψ  sin²θ+cos²θ=1  a²+b²=c²";
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            opacity: 0.05;  /* Томьёонууд хэт тод байж болохгүй */
-            font-size: 25px;
-            color: #ffffff;
-            line-height: 150px;
-            word-spacing: 200px;
-            font-family: 'Courier New', Courier, monospace;
-            pointer-events: none;
+            background: linear-gradient(125deg, #0e1117 0%, #161b22 50%, #0e1117 100%);
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
             overflow: hidden;
-            animation: move-bg 60s linear infinite;
         }
 
-        @keyframes move-bg {
-            from { transform: translateY(0); }
-            to { transform: translateY(-500px); }
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
-        
-        /* Sidebar-ийг илүү гоё болгох */
+
+        /* 2. Гэрэлтсэн дугуй дүрснүүд (Floating Orbs) */
+        .stApp::before {
+            content: "";
+            position: fixed;
+            top: -10%;
+            left: -10%;
+            width: 40%;
+            height: 40%;
+            background: radial-gradient(circle, rgba(79, 172, 254, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+            z-index: -1;
+            filter: blur(50px);
+            animation: orbMove 20s infinite alternate;
+        }
+
+        .stApp::after {
+            content: "";
+            position: fixed;
+            bottom: -10%;
+            right: -10%;
+            width: 50%;
+            height: 50%;
+            background: radial-gradient(circle, rgba(0, 242, 254, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+            z-index: -1;
+            filter: blur(60px);
+            animation: orbMove 25s infinite alternate-reverse;
+        }
+
+        @keyframes orbMove {
+            from { transform: translate(0, 0); }
+            to { transform: translate(100px, 100px); }
+        }
+
+        /* 3. Card стиль (Контент хэсгийг вэбсайт шиг цэгцтэй болгох) */
+        div.stButton > button {
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-weight: bold;
+            transition: 0.3s;
+            box-shadow: 0px 4px 15px rgba(0, 242, 254, 0.3);
+        }
+
+        div.stButton > button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0px 6px 20px rgba(0, 242, 254, 0.5);
+        }
+
+        /* 4. Текстүүдийг вэбсайт шиг фонттой болгох */
+        h1 {
+            font-family: 'Inter', sans-serif;
+            background: -webkit-linear-gradient(#eee, #333);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800 !important;
+            letter-spacing: -1px;
+        }
+
+        /* 5. Sidebar-ийг шилэн (Glassmorphism) болгох */
         [data-testid="stSidebar"] {
-            background-color: #161b22;
-            border-right: 1px solid #30363d;
+            background-color: rgba(22, 27, 34, 0.8) !important;
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
         }
         </style>
         """,
         unsafe_allow_html=True
     )
 
-# Функцээ дуудах
-add_bg_math_pattern()
-
+add_website_style_bg()
 
 def get_embedding(text, model="text-embedding-3-small"):
     # Текстийг цэвэрлэх ба Unicode-д найдвартай шилжүүлэх
