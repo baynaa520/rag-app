@@ -4,38 +4,41 @@ import PyPDF2
 import re
 from openai import OpenAI
 import numpy as np
+import sys
 import io
 
+# --- 0. ENCODING ХАМГААЛАЛТ ---
+# Сервер дээр кирилл үсэг уншихад ASCII алдаа гарахаас сэргийлнэ
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 # --- 1. ТОХИРГОО ---
-# Streamlit Secrets-ээс Key-г унших (Аюулгүй арга)
 try:
+    # Streamlit Secrets-ээс Key-г унших
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-except Exception:
-    st.error("🔑 OpenAI API Key тохируулагдаагүй байна. Settings -> Secrets хэсэгт нэмнэ үү.")
+except Exception as e:
+    st.error("🔑 OpenAI API Key тохируулагдаагүй байна. Settings -> Secrets хэсэгт OPENAI_API_KEY нэрээр нэмнэ үү.")
 
 def get_embedding(text, model="text-embedding-3-small"):
-    # 1. Текстийг Unicode хэлбэрт найдвартай шилжүүлэх
+    # Текстийг цэвэрлэх ба Unicode-д найдвартай шилжүүлэх
     if isinstance(text, bytes):
-        text = text.decode('utf-8')
+        text = text.decode('utf-8', errors='ignore')
     
-    # 2. Шинэ мөр болон илүү зайг цэвэрлэх
     text = text.replace("\n", " ").strip()
     
-    # 3. Хэрэв текст хоосон бол алдаа гарахаас сэргийлэх
     if not text:
-        return [0.0] * 1536 # Хоосон вектор буцаах
+        return [0.0] * 1536 # Хоосон текст байвал тэг вектор буцаана
         
     try:
         return client.embeddings.create(input=[text], model=model).data[0].embedding
     except Exception as e:
-        # Алдаа гарвал консол дээр хэвлэх
-        print(f"Embedding error details: {e}")
+        st.error(f"Embedding хийхэд алдаа гарлаа (API Key эсвэл Төлбөр шалгана уу): {e}")
         raise e
 
 def cosine_similarity(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-# --- 2. УНИВЕРСАЛ ФАЙЛ УНШИГЧ (UTF-8 дэмждэг) ---
+# --- 2. УНИВЕРСАЛ ФАЙЛ УНШИГЧ ---
 def read_single_file(uploaded_file):
     file_type = uploaded_file.name.split('.')[-1].lower()
     text = ""
@@ -50,7 +53,6 @@ def read_single_file(uploaded_file):
                 if content:
                     text += content
         elif file_type == 'txt':
-            # Encoding алдаанаас сэргийлж 'ignore' ашиглав
             text = uploaded_file.getvalue().decode("utf-8", errors="ignore")
     except Exception as e:
         st.error(f"❌ '{uploaded_file.name}' файлыг уншихад алдаа: {e}")
@@ -60,15 +62,17 @@ def read_single_file(uploaded_file):
 st.set_page_config(page_title="Way Academy RAG", layout="wide")
 st.title("🤖 Advanced Multi-File RAG Tool")
 
+# Sidebar - Тохиргоо
 with st.sidebar:
     st.header("⚙️ Конфигураци")
-    chunk_method = st.radio("Splatting арга:", ("Өгүүлбэрээр", "Параграфаар"))
+    chunk_method = st.radio("Chunk хийх арга:", ("Өгүүлбэрээр", "Параграфаар"))
     top_k = st.number_input("Хэдэн илэрц харуулах вэ?", 1, 10, 5)
+    st.divider()
     if st.button("Шинээр эхлэх (Reset)"):
         st.session_state.clear()
         st.rerun()
 
-# Файл оруулах (Олон файл зөвшөөрнө)
+# Файл оруулах хэсэг
 uploaded_files = st.file_uploader(
     "Файлуудаа оруулна уу (PDF, DOCX, TXT)", 
     type=["pdf", "docx", "txt"], 
@@ -76,7 +80,7 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
-    # 1. Текст боловсруулах
+    # 1. Текст боловсруулах (Chunking)
     if "chunks" not in st.session_state:
         all_chunks = []
         all_sources = []
@@ -85,11 +89,10 @@ if uploaded_files:
             for uploaded_file in uploaded_files:
                 content = read_single_file(uploaded_file)
                 
-                # Chunking
                 if chunk_method == "Параграфаар":
                     file_chunks = [p.strip() for p in content.split('\n') if p.strip()]
                 else:
-                    # Кирилл цэгийг тооцсон Regex
+                    # Кирилл цэг болон асуултын тэмдэгээр салгах
                     file_chunks = re.split(r'(?<=[.!?]) +', content)
                     file_chunks = [s.strip() for s in file_chunks if s.strip()]
                 
@@ -101,31 +104,32 @@ if uploaded_files:
             st.session_state.sources = all_sources
             st.success(f"✅ Нийт {len(all_chunks)} хэсэг мэдээлэл бэлэн боллоо.")
 
-    # 2. Embedding (Вектор сан)
+    # 2. Embedding (Вектор сан үүсгэх)
     if "embeddings" not in st.session_state and "chunks" in st.session_state:
-        if st.button("🚀 Мэдлэгийн сан үүсгэх"):
-            with st.spinner("Вектор сан үүсгэж байна... Түр хүлээнэ үү."):
+        if st.button("🚀 Мэдлэгийн сан үүсгэх (Embedding)"):
+            with st.spinner("Вектор сан үүсгэж байна... (API Key шалгаж байна)"):
                 try:
                     embs = [get_embedding(c) for c in st.session_state.chunks]
                     st.session_state.embeddings = embs
                     st.success("✅ Вектор сан амжилттай үүслээ!")
                 except Exception as e:
-                    st.error(f"Embedding алдаа: {e}")
+                    # Алдааг дэлгэрэнгүй харуулах
+                    st.error(f"Embedding хийхэд алдаа гарлаа. Таны API Key эсвэл төлбөрийн үлдэгдэл хүрэлцэхгүй байж магадгүй.")
 
-    # 3. Хайлт ба Асуулт
+    # 3. Хайлт ба Асуулт хариулт
     if "embeddings" in st.session_state:
         st.divider()
-        query = st.text_input("📝 Асуултаа бичнэ үү:", placeholder="Документаас хайх...")
+        query = st.text_input("📝 Документаас асуух асуултаа бичнэ үү:", placeholder="Жишээ нь: Гэрээний хугацаа хэзээ дуусах вэ?")
         
         if query:
-            with st.spinner("Хайж байна..."):
+            with st.spinner("Хамгийн ойрхон хэсгүүдийг хайж байна..."):
                 query_emb = get_embedding(query)
                 scores = []
                 for i, emb in enumerate(st.session_state.embeddings):
                     score = cosine_similarity(query_emb, emb)
                     scores.append((score, st.session_state.chunks[i], st.session_state.sources[i]))
                 
-                # Хамгийн өндөр оноотойг эрэмбэлэх
+                # Оноогоор нь эрэмбэлэх (Хамгийн өндөр нь дээрээ)
                 scores.sort(key=lambda x: x[0], reverse=True)
                 
                 st.subheader(f"🔍 Олдсон {top_k} илэрц:")
@@ -133,3 +137,4 @@ if uploaded_files:
                     score, text, source = scores[i]
                     with st.expander(f"Илэрц #{i+1} | Ижил тал: {score:.2%} | Эх сурвалж: {source}"):
                         st.write(text)
+                        st.caption(f"Файл: {source}")
